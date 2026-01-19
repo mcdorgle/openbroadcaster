@@ -418,6 +418,7 @@ namespace OpenBroadcaster.ViewModels
             _queueService.HistoryChanged += OnQueueHistoryChanged;
             _audioService = new AudioService();
             _audioService.VuMetersUpdated += OnVuMetersUpdated;
+            _audioService.DeckPlaybackCompleted += OnDeckPlaybackCompleted;
             _transportService = new TransportService(_eventBus, _queueService, _audioService);
             _cartWallService = new CartWallService(_audioService, null, CartSlotCount, SynchronizationContext.Current);
             _libraryService = new LibraryService();
@@ -905,6 +906,29 @@ namespace OpenBroadcaster.ViewModels
         private void OnVuMetersUpdated(object? sender, VuMeterReading reading)
         {
             RunOnUiThread(() => UpdateVuMeters(reading));
+        }
+
+        private void OnDeckPlaybackCompleted(object? sender, DeckIdentifier deckId)
+        {
+            _logger.LogInformation("Deck {DeckId} playback completed, advancing to next track", deckId);
+            
+            // Update deck state to stopped
+            _transportService.Stop(deckId);
+            
+            // Try to load and play next track from queue
+            var next = _transportService.RequestNextFromQueue(deckId);
+            if (next != null)
+            {
+                _logger.LogInformation("Auto-advancing deck {DeckId} to: {Title} by {Artist}", deckId, next.Track?.Title, next.Track?.Artist);
+                _transportService.Play(deckId);
+                
+                // Announce to Twitch if connected
+                _twitchService?.AnnounceNowPlaying(next);
+            }
+            else
+            {
+                _logger.LogWarning("Queue is empty after deck {DeckId} finished. AutoDJ will refill if enabled.", deckId);
+            }
         }
 
         private void UpdateVuMeters(VuMeterReading reading)

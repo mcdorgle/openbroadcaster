@@ -80,8 +80,16 @@ namespace OpenBroadcaster.Core.Services
             DeckB = new AudioDeck(DeckIdentifier.B);
             DeckA.LevelChanged += level => _vuMeterService.UpdateSourceLevel(AudioSourceType.DeckA, NormalizeLevel(level));
             DeckB.LevelChanged += level => _vuMeterService.UpdateSourceLevel(AudioSourceType.DeckB, NormalizeLevel(level));
-            DeckA.PlaybackStopped += () => _vuMeterService.UpdateSourceLevel(AudioSourceType.DeckA, 0);
-            DeckB.PlaybackStopped += () => _vuMeterService.UpdateSourceLevel(AudioSourceType.DeckB, 0);
+            DeckA.PlaybackStopped += () =>
+            {
+                _vuMeterService.UpdateSourceLevel(AudioSourceType.DeckA, 0);
+                DeckPlaybackCompleted?.Invoke(this, DeckIdentifier.A);
+            };
+            DeckB.PlaybackStopped += () =>
+            {
+                _vuMeterService.UpdateSourceLevel(AudioSourceType.DeckB, 0);
+                DeckPlaybackCompleted?.Invoke(this, DeckIdentifier.B);
+            };
 
             _cartPlayer = new CartPlayer();
             _cartPlayer.LevelChanged += (_, level) => _vuMeterService.UpdateSourceLevel(AudioSourceType.Cartwall, NormalizeLevel(level));
@@ -92,6 +100,7 @@ namespace OpenBroadcaster.Core.Services
         public AudioDeck DeckB { get; }
 
         public event EventHandler<VuMeterReading>? VuMetersUpdated;
+        public event EventHandler<DeckIdentifier>? DeckPlaybackCompleted;
 
         public AudioRoutingGraph RoutingGraph => _routingGraph;
 
