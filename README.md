@@ -137,13 +137,19 @@ OpenBroadcaster is a full-featured radio automation system designed for internet
 
 1. Install the [.NET 8.0 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0)
 
-### Using the Windows Installer
+### Using the Windows Installer (Non-free Distribution)
 
-If you obtained an `OpenBroadcaster-Setup.exe` installer (for example from the official distribution channel):
+If you obtained an `OpenBroadcaster-Setup.exe` installer from an official
+distribution channel (for example via openbroadcaster.org or a commercial
+partner):
 
 1. Run the installer and follow the prompts
 2. Launch **OpenBroadcaster** from the Start Menu or desktop shortcut
 3. Open **Settings → Audio** on first launch to verify devices
+
+The **installer binary itself is not free/open software** and is distributed
+under separate terms. This repository only provides the open-source code used
+to build the application.
 
 ### Building from Source
 

@@ -9,6 +9,16 @@ This folder contains the Inno Setup script and build tools for creating the Open
 
 ## Building the Installer
 
+### Important: Distribution & Licensing
+
+The contents of this repository (source code, scripts, and documentation) are
+licensed under the MIT license. **The compiled Windows installer that you
+produce with this script is not free/open software and is not licensed for
+public redistribution from this repository.**
+
+Use the generated installer only for your own testing or according to the
+separate terms under which you obtain an official installer.
+
 ### Option 1: Use the batch file (Recommended)
 
 Simply run:
