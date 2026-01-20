@@ -176,36 +176,160 @@ If you obtained an `OpenBroadcaster-Setup.exe` installer (for example from the o
 dotnet test OpenBroadcaster.Tests/
 ```
 
-## Quick Start Guide
+## Website & Full Documentation
 
-1. **Launch OpenBroadcaster** and configure your audio devices in **Settings → Audio**
+- Product website: https://openbroadcaster.org
+- Online docs & guides: https://openbroadcaster.org/docs/
 
-2. **Import your music library**:
-   - Go to **Library → Import Tracks** for individual files
-   - Go to **Library → Scan Folders** for batch imports
+The docs folder in this repository mirrors the online documentation. The
+step‑by‑step user guide lives under `docs/user-guide` and is organized from
+"Getting Started" through automation, web integration, and troubleshooting.
 
-3. **Organize with categories**:
-   - Open **Library → Manage Categories**
-   - Create categories (e.g., "Rock", "Pop", "Jingles")
-   - Assign tracks to categories via right-click
+## Quick Start (First-Time User)
 
-4. **Set up automation** (optional):
-   - Enable **AutoDJ** to automatically fill the queue
-   - Configure rotation rules in Settings
+This section is for someone who has never used OpenBroadcaster before and just
+installed it on Windows.
 
-5. **Configure streaming** (optional):
-   - Add encoder profiles in **Settings → Encoders**
-   - Enter your Shoutcast/Icecast server details
-   - Enable encoder to start streaming
+### 1. Install & Launch
 
-6. **Connect Twitch** (optional):
-   - Enter credentials in **Settings → Twitch**
-   - Enable chat bridge to accept song requests
+1. Run `OpenBroadcaster-Setup.exe` and complete the wizard.
+2. Start **OpenBroadcaster** from the Start Menu or desktop shortcut.
+3. On first launch, maximize the window so you can see the Library, Queue,
+   Decks, and Cartwall clearly.
 
-7. **Start broadcasting**:
-   - Drag tracks to the queue or enable AutoDJ
-   - Hit play on Deck A
-   - Monitor levels on VU meters
+### 2. Configure Audio Devices
+
+1. Click the **Settings** (gear) icon.
+2. Open the **Audio** tab.
+3. Set at minimum:
+   - **Deck A Output**: your main speakers or headphones.
+   - **Deck B Output**: usually the same as Deck A.
+   - **Cart Wall Output**: same as Deck A/B unless you use a mixer.
+   - **Encoder Input**: `Default` to stream what you hear, or a mixer input.
+4. Click **Apply** / **Save**.
+
+To test quickly: load any track to Deck A (double‑click from the Library) and
+press **Play** or hit **Spacebar** — you should hear audio.
+
+### 3. Add Your Music Library
+
+1. Click **Library** in the left sidebar.
+2. Choose **Add Folder** and select one or more folders that contain music.
+3. Wait for the scan to finish; tracks will appear in the Library list with
+   Title, Artist, Album, Duration, etc.
+4. Use the search box above the list to find songs by title/artist/album.
+
+You can also drag folders from Windows Explorer directly into the Library
+panel to add and scan them.
+
+### 4. Organize with Categories (Recommended)
+
+Categories make AutoDJ and rotations work well.
+
+1. Select one or more tracks in the Library.
+2. Right‑click → **Assign Categories**.
+3. Tick existing categories or create new ones like:
+   - "Music", "Jingles", "Promos", "IDs".
+   - Genre‑based ("Rock", "Pop", "Country"…).
+4. Save your changes.
+
+You can manage categories and watch folders in **Settings → Library**.
+
+### 5. Build a Simple Queue & Play
+
+1. In the Library, right‑click tracks and choose **Add to Queue**, or drag
+   them into the **Queue** panel.
+2. Make sure **Deck A** is empty or stopped.
+3. Double‑click any queued item to load it into Deck A.
+4. Press **Play** (or Spacebar) to start your first track.
+5. Enable **Auto Advance** in the Queue/Deck options so the next queued track
+   loads automatically when one finishes.
+
+Basic keyboard shortcuts:
+- `Spacebar` – Play/Pause Deck A
+- `Shift + Space` – Play/Pause Deck B
+- `Q` – Add selected track to queue
+- `Delete` – Remove selected item from queue
+
+### 6. Use AutoDJ (Optional but Powerful)
+
+AutoDJ keeps the queue topped up using your category rules.
+
+1. Open **Settings → AutoDJ**.
+2. Create or edit a rotation:
+   - Add slots that reference categories (e.g., Music → Jingle → Music).
+   - Set separation rules (minimum time between same artist/title).
+3. Set a **Target Queue Depth** (e.g., 10 items).
+4. Turn on **AutoDJ** from the toolbar.
+
+OpenBroadcaster will now automatically add songs to the queue whenever it
+falls below the target depth.
+
+### 7. Configure Streaming (Going Live)
+
+If you have an Icecast/Shoutcast or hosted stream account:
+
+1. Get these details from your provider: server address/host, port, mount
+   point (Icecast), and source password.
+2. In OpenBroadcaster, go to **Settings → Encoder**.
+3. Click **Add Profile** and enter:
+   - Profile name (e.g., "Main Stream 128k").
+   - Server type (Icecast 2 or Shoutcast).
+   - Server address, port, and mount point (Icecast).
+   - Password (source password).
+   - Format and bitrate (e.g., MP3 128 kbps, 44.1 kHz, Stereo).
+4. Save the profile.
+5. Open the **Encoder** panel, select your profile, and click
+   **Start Encoding**.
+
+When status shows **Connected**, your stream is live. Listen via your
+streaming URL in a browser or media player to confirm.
+
+### 8. Connect Twitch (Song Requests)
+
+1. Go to **Settings → Twitch**.
+2. Click **Connect** and complete the browser authorization.
+3. Configure request pricing, cooldowns, and loyalty points.
+4. Enable the Twitch chat bridge.
+
+Viewers can then use chat commands like `!s <term>`, `!1`–`!9`, `!np`, and
+`!next` to search, request songs, and see now playing info.
+
+### 9. Web & WordPress Integration (Optional)
+
+If you run a website or WordPress site, you can expose your now playing
+metadata, queue, and requests:
+
+1. Decide on **Direct mode** (built‑in web server on your PC) or
+   **Relay mode** (a separate relay service for NAT‑safe setups).
+2. For WordPress, copy the plugin from `wordpress-plugin-v2/` into your
+   WordPress `wp-content/plugins` folder and activate **OpenBroadcaster Web**.
+3. In WordPress → **Settings → OpenBroadcaster**, configure:
+   - Direct or Relay mode connection.
+   - The URL of your OpenBroadcaster Direct server or Relay.
+   - Optional API key.
+4. Use shortcodes like `[ob_now_playing]`, `[ob_library]`, `[ob_request]`,
+   `[ob_queue]`, or `[ob_full_page]` on your site.
+
+Detailed instructions for Direct, Relay, and all shortcodes are in
+`docs/user-guide/09-web-integration.txt` and on the website docs.
+
+### 10. Overlays for OBS/Streaming
+
+1. In OpenBroadcaster, go to **Settings → Overlay** and enable **Overlay
+   Server**.
+2. Note the overlay URL (typically `http://localhost:9750`).
+3. In OBS, add a **Browser Source** using this URL and size/position it in
+   your scene.
+
+The overlay shows now playing info, artwork, history, and current requests in
+real time.
+
+### 11. Where to Get Help
+
+- Built‑in text guides: see the `.txt` files under `docs/user-guide`.
+- Online docs: https://openbroadcaster.org/docs/
+- Troubleshooting & FAQ: `docs/user-guide/11-troubleshooting.txt`.
 
 ## Project Structure
 
