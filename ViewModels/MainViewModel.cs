@@ -26,7 +26,7 @@ namespace OpenBroadcaster.ViewModels
 {
     public class MainViewModel : ViewModelBase, IDisposable
     {
-        private const int CartSlotCount = 21;
+        private const int CartSlotCount = 16;
         private const int ChatHistoryLimit = 200;
 
         private readonly QueueService _queueService;
@@ -43,6 +43,10 @@ namespace OpenBroadcaster.ViewModels
         private readonly EncoderManager _encoderManager;
         private readonly SharedEncoderAudioSource _sharedEncoderSource;
         private readonly OverlayService _overlayService;
+        private readonly object _autoDjCrossfadeLock = new();
+        private bool _autoDjCrossfadeInProgress;
+        private readonly TimeSpan _autoDjCrossfadeDuration = TimeSpan.FromSeconds(5);
+        private readonly IDisposable _autoDjCrossfadeSubscription;
         private Core.Services.DirectServer.DirectHttpServer? _directServer;
         private AppSettings _appSettings;
         private TwitchSettings _twitchSettings;
@@ -72,6 +76,10 @@ namespace OpenBroadcaster.ViewModels
         private readonly System.Windows.Threading.DispatcherTimer _clockTimer;
         private string _currentTime = "00:00:00";
         private bool _use24HourClock = true;
+        private int _masterVolume = 100;
+        private int? _preDuckMasterVolume;
+        private bool _isMicDucked;
+        private bool _suppressMasterVolumePersistence;
 
         public DeckViewModel DeckA { get; }
         public DeckViewModel DeckB { get; }
@@ -84,6 +92,55 @@ namespace OpenBroadcaster.ViewModels
         public ReadOnlyObservableCollection<CartPad> CartPads => _cartWallService.Pads;
         public ObservableCollection<string> CartColorPalette { get; }
         public ObservableCollection<EncoderStatusViewModel> EncoderStatuses { get; }
+        private double _twitchChatFontSize = 12;
+
+        public double TwitchChatFontSize
+        {
+            get => _twitchChatFontSize;
+            set => SetProperty(ref _twitchChatFontSize, Math.Clamp(value, 8, 20));
+        }
+
+        public int MasterVolume
+        {
+            get => _masterVolume;
+            set
+            {
+                if (SetProperty(ref _masterVolume, value))
+                {
+                    var clamped = Math.Clamp(value, 0, 100);
+                    var scalar = clamped / 100.0;
+
+                    _audioService.SetDeckVolume(DeckIdentifier.A, scalar);
+                    _audioService.SetDeckVolume(DeckIdentifier.B, scalar);
+                    _audioService.SetCartVolume(scalar);
+
+                    if (!_suppressMasterVolumePersistence && _appSettings?.Audio != null)
+                    {
+                        _appSettings.Audio.MasterVolumePercent = clamped;
+                        _appSettingsStore.Save(_appSettings);
+                    }
+                }
+            }
+        }
+
+        private bool _micDuckingEnabled;
+        public bool MicDuckingEnabled
+        {
+            get => _micDuckingEnabled;
+            set
+            {
+                if (SetProperty(ref _micDuckingEnabled, value))
+                {
+                    if (_appSettings?.Audio != null)
+                    {
+                        _appSettings.Audio.MicDuckingEnabled = value;
+                        _appSettingsStore.Save(_appSettings);
+                    }
+
+                    UpdateMicDuckingState();
+                }
+            }
+        }
 
         /// <summary>
         /// Current time displayed as HH:MM:SS digital clock.
@@ -377,6 +434,7 @@ namespace OpenBroadcaster.ViewModels
                 {
                     // This assumes a method exists on the audio service to control the mic.
                     _audioService.SetMicEnabled(value);
+                    UpdateMicDuckingState();
                 }
             }
         }
@@ -468,6 +526,7 @@ namespace OpenBroadcaster.ViewModels
             _appSettings = _appSettingsStore.Load();
             _eventBus = new EventBus();
             _encoderMetadataSubscription = _eventBus.Subscribe<DeckStateChangedEvent>(OnDeckStateChangedForEncoderMetadata);
+            _autoDjCrossfadeSubscription = _eventBus.Subscribe<DeckStateChangedEvent>(OnDeckStateChangedForAutoDjCrossfade);
             _queueService = new QueueService();
             _queueService.QueueChanged += OnQueueServiceChanged;
             _queueService.HistoryChanged += OnQueueHistoryChanged;
@@ -583,6 +642,18 @@ namespace OpenBroadcaster.ViewModels
             _cartWallVolume = Math.Clamp(_appSettings.Audio?.CartWallVolumePercent ?? 100, 0, 100);
             _micVolume = Math.Clamp(_appSettings.Audio?.MicVolumePercent ?? 100, 0, 100);
             _audioService.SetMicVolume(_micVolume / 100.0);
+
+            // Initialize master volume from settings if present
+            if (_appSettings.Audio != null && _appSettings.Audio.MasterVolumePercent > 0)
+            {
+                _masterVolume = Math.Clamp(_appSettings.Audio.MasterVolumePercent, 0, 100);
+            }
+            else
+            {
+                _masterVolume = 100;
+            }
+
+            _micDuckingEnabled = _appSettings.Audio?.MicDuckingEnabled ?? false;
 
             _suppressDeckVolumePersistence = true;
             DeckA = new DeckViewModel(
@@ -1134,6 +1205,127 @@ namespace OpenBroadcaster.ViewModels
             else
             {
                 _logger.LogWarning("Queue is empty after deck {DeckId} finished. AutoDJ will refill if enabled.", deckId);
+            }
+        }
+
+        private void OnDeckStateChangedForAutoDjCrossfade(DeckStateChangedEvent payload)
+        {
+            if (!_autoDjEnabled)
+            {
+                return;
+            }
+
+            if (payload.Status != DeckStatus.Playing)
+            {
+                return;
+            }
+
+            // Only crossfade when exactly one deck is currently playing
+            var deckA = _transportService.DeckA;
+            var deckB = _transportService.DeckB;
+            var deckAPlaying = deckA.Status == DeckStatus.Playing;
+            var deckBPlaying = deckB.Status == DeckStatus.Playing;
+
+            if (deckAPlaying == deckBPlaying)
+            {
+                return;
+            }
+
+            var fromDeck = deckAPlaying ? DeckIdentifier.A : DeckIdentifier.B;
+
+            if (payload.DeckId != fromDeck)
+            {
+                return;
+            }
+
+            // Only trigger once we are within the crossfade window
+            if (payload.Remaining > _autoDjCrossfadeDuration)
+            {
+                return;
+            }
+
+            lock (_autoDjCrossfadeLock)
+            {
+                if (_autoDjCrossfadeInProgress)
+                {
+                    return;
+                }
+
+                _autoDjCrossfadeInProgress = true;
+            }
+
+            var toDeck = fromDeck == DeckIdentifier.A ? DeckIdentifier.B : DeckIdentifier.A;
+            _ = StartAutoDjCrossfadeAsync(fromDeck, toDeck);
+        }
+
+        private async Task StartAutoDjCrossfadeAsync(DeckIdentifier fromDeck, DeckIdentifier toDeck)
+        {
+            try
+            {
+                // Load next track into the target deck
+                var next = _transportService.RequestNextFromQueue(toDeck);
+                if (next == null)
+                {
+                    return;
+                }
+
+                // Capture current deck volumes
+                var fromStartVolume = _audioService.GetDeckVolume(fromDeck);
+                if (fromStartVolume <= 0)
+                {
+                    fromStartVolume = 1.0;
+                }
+
+                var toTargetVolume = _audioService.GetDeckVolume(toDeck);
+                if (toTargetVolume <= 0)
+                {
+                    toTargetVolume = fromStartVolume;
+                }
+
+                // Start target deck at zero and begin playback
+                _audioService.SetDeckVolume(toDeck, 0.0);
+                _transportService.Play(toDeck);
+
+                const int steps = 20;
+                var stepDelay = TimeSpan.FromMilliseconds(_autoDjCrossfadeDuration.TotalMilliseconds / steps);
+
+                for (int i = 1; i <= steps; i++)
+                {
+                    if (!_autoDjEnabled)
+                    {
+                        break;
+                    }
+
+                    var t = i / (double)steps;
+                    _audioService.SetDeckVolume(fromDeck, fromStartVolume * (1.0 - t));
+                    _audioService.SetDeckVolume(toDeck, toTargetVolume * t);
+
+                    await Task.Delay(stepDelay).ConfigureAwait(false);
+                }
+
+                // Stop the source deck without triggering its own auto-advance
+                _transportService.IsSkipping = true;
+                try
+                {
+                    _transportService.Stop(fromDeck);
+                }
+                finally
+                {
+                    _transportService.IsSkipping = false;
+                }
+
+                _audioService.SetDeckVolume(toDeck, toTargetVolume);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during AutoDJ crossfade from {FromDeck} to {ToDeck}", fromDeck, toDeck);
+            }
+            finally
+            {
+                lock (_autoDjCrossfadeLock)
+                {
+                    _autoDjCrossfadeInProgress = false;
+                }
             }
         }
 
@@ -2406,6 +2598,54 @@ namespace OpenBroadcaster.ViewModels
             return appliedPercent;
         }
 
+        private void UpdateMicDuckingState()
+        {
+            if (_micDuckingEnabled && _micEnabled)
+            {
+                if (_isMicDucked)
+                {
+                    return;
+                }
+
+                _preDuckMasterVolume ??= _masterVolume;
+
+                _suppressMasterVolumePersistence = true;
+                try
+                {
+                    MasterVolume = 40;
+                }
+                finally
+                {
+                    _suppressMasterVolumePersistence = false;
+                }
+
+                _isMicDucked = true;
+            }
+            else
+            {
+                if (!_isMicDucked)
+                {
+                    return;
+                }
+
+                if (_preDuckMasterVolume.HasValue)
+                {
+                    _suppressMasterVolumePersistence = true;
+                    try
+                    {
+                        MasterVolume = _preDuckMasterVolume.Value;
+                    }
+                    finally
+                    {
+                        _suppressMasterVolumePersistence = false;
+                    }
+                }
+
+                _preDuckMasterVolume = null;
+                _isMicDucked = false;
+            }
+        }
+
         private static bool AreAudioSettingsEqual(AudioSettings? a, AudioSettings? b)
         {
             if (a == null && b == null)
@@ -2425,7 +2665,8 @@ namespace OpenBroadcaster.ViewModels
                    && a.DeckBVolumePercent == b.DeckBVolumePercent
                    && a.CartWallDeviceId == b.CartWallDeviceId
                    && a.CartWallVolumePercent == b.CartWallVolumePercent
-                   && a.MicVolumePercent == b.MicVolumePercent
+                     && a.MicVolumePercent == b.MicVolumePercent
+                     && a.MicDuckingEnabled == b.MicDuckingEnabled
                    && a.EncoderDeviceId == b.EncoderDeviceId
                    && a.MicInputDeviceId == b.MicInputDeviceId;
         }
@@ -2467,6 +2708,7 @@ namespace OpenBroadcaster.ViewModels
             _encoderManager.Dispose();
             _sharedEncoderSource.Dispose();
             _overlayService.Dispose();
+            _autoDjCrossfadeSubscription.Dispose();
         }
     }
 

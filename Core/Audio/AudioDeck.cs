@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using NAudio.Wave;
 using NAudio.Wave.SampleProviders;
 using OpenBroadcaster.Core.Models;
@@ -22,6 +23,11 @@ namespace OpenBroadcaster.Core.Audio
         private bool _suppressPlaybackStopped;
         private WaveFormat? _encoderTapFormat;
         private AudioSampleBlockHandler? _encoderSampleTap;
+        private TimeSpan _lastNonSilentPosition = TimeSpan.Zero;
+        private const float SilenceThreshold = 0.002f; // Roughly -54 dBFS
+        private static readonly TimeSpan MaxTrailingSilence = TimeSpan.FromSeconds(1.0);
+        private const double MinCompletionForGapKiller = 0.7; // Only engage near the end
+        private bool _isGapFadeInProgress;
 
         public AudioDeck(DeckIdentifier deckId, int deviceNumber = 0)
         {
@@ -64,6 +70,7 @@ namespace OpenBroadcaster.Core.Audio
             {
                 ResetReader();
                 _reader = new AudioFileReader(filePath);
+                _lastNonSilentPosition = TimeSpan.Zero;
                 _sampleChannel = new SampleChannel(_reader, true);
                 _sampleChannel.Volume = _volume;
                 _sampleChannel.PreVolumeMeter += OnSamplePeak;
@@ -311,6 +318,8 @@ namespace OpenBroadcaster.Core.Audio
 
             var peak = Math.Abs(e.MaxSampleValues[0]);
             LevelChanged?.Invoke(peak);
+
+            TryGapKillOnTrailingSilence(peak);
         }
 
         private void OnSamplePeak(object? sender, StreamVolumeEventArgs e)
@@ -339,6 +348,86 @@ namespace OpenBroadcaster.Core.Audio
             }
 
             return _volume;
+        }
+
+        private void TryGapKillOnTrailingSilence(float peak)
+        {
+            // Only act while actively playing with a valid reader
+            if (_reader == null || _waveOut == null || _waveOut.PlaybackState != PlaybackState.Playing)
+            {
+                return;
+            }
+
+            var total = _reader.TotalTime;
+            if (total <= TimeSpan.Zero)
+            {
+                return;
+            }
+
+            var position = _reader.CurrentTime;
+
+            // Update last non-silent position whenever audio is above threshold
+            if (peak > SilenceThreshold)
+            {
+                _lastNonSilentPosition = position;
+                return;
+            }
+
+            // Don't treat early quiet passages as end-of-track silence
+            var completion = position.TotalSeconds / total.TotalSeconds;
+            if (completion < MinCompletionForGapKiller)
+            {
+                return;
+            }
+
+            var trailingSilence = position - _lastNonSilentPosition;
+            if (trailingSilence >= MaxTrailingSilence)
+            {
+                // Fade out and stop a bit early to avoid long dead air at the end.
+                // This will raise PlaybackStopped and allow normal auto-advance.
+                BeginGapFadeAndStop();
+            }
+        }
+
+        private void BeginGapFadeAndStop()
+        {
+            lock (_sync)
+            {
+                if (_isGapFadeInProgress || _waveOut == null || _reader == null || _waveOut.PlaybackState != PlaybackState.Playing)
+                {
+                    return;
+                }
+
+                _isGapFadeInProgress = true;
+            }
+
+            const int steps = 10;
+            const int stepDurationMs = 80; // ~0.8s total fade
+
+            var startVolume = Volume;
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    for (int i = 1; i <= steps; i++)
+                    {
+                        var factor = 1.0 - (i / (double)steps);
+                        var targetVolume = (float)(startVolume * factor);
+                        SetVolume(targetVolume);
+                        await Task.Delay(stepDurationMs).ConfigureAwait(false);
+                    }
+
+                    Stop();
+                }
+                finally
+                {
+                    lock (_sync)
+                    {
+                        _isGapFadeInProgress = false;
+                    }
+                }
+            });
         }
     }
 }

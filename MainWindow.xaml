@@ -227,16 +227,31 @@
                         </ListView.View>
                     </ListView>
 
-                    <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,18,0,8" VerticalAlignment="Center">
-                        <TextBlock Text="Twitch Chat" Style="{StaticResource SectionTitleText}" />
-                        <Border Background="#FF0F1218"
-                                BorderBrush="#FF2C3543"
-                                BorderThickness="0,0,0,2"
-                                Margin="10,0,0,0"
-                                Padding="6,2">
-                            <TextBlock Text="#openbroadcaster" Foreground="{StaticResource StudioAccentBrush}" FontSize="12" />
-                        </Border>
-                    </StackPanel>
+                    <Grid Grid.Row="3" Margin="0,18,0,8" VerticalAlignment="Center">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Twitch Chat" Style="{StaticResource SectionTitleText}" />
+                            <Border Background="#FF0F1218"
+                                    BorderBrush="#FF2C3543"
+                                    BorderThickness="0,0,0,2"
+                                    Margin="10,0,0,0"
+                                    Padding="6,2">
+                                <TextBlock Text="#openbroadcaster" Foreground="{StaticResource StudioAccentBrush}" FontSize="12" />
+                            </Border>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <TextBlock Text="Font" Margin="0,0,4,0" Foreground="{StaticResource StudioMutedTextBrush}" FontSize="10" />
+                            <Slider Width="80"
+                                    Minimum="8"
+                                    Maximum="20"
+                                    Value="{Binding TwitchChatFontSize, Mode=TwoWay}"
+                                    TickFrequency="2"
+                                    IsSnapToTickEnabled="True" />
+                        </StackPanel>
+                    </Grid>
 
                     <Border Grid.Row="4" Background="#FF0E1118" BorderBrush="#FF2D313B" BorderThickness="1" CornerRadius="6">
                         <ListBox x:Name="TwitchChatListBox"
@@ -254,8 +269,8 @@
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Text="{Binding Timestamp}" Foreground="{StaticResource StudioMutedTextBrush}" FontSize="12" Margin="0,0,10,0" />
-                                        <TextBlock Grid.Column="1" Text="{Binding UserName}" FontWeight="SemiBold" Margin="0,0,8,0">
+                                        <TextBlock Text="{Binding Timestamp}" Foreground="{StaticResource StudioMutedTextBrush}" FontSize="{Binding DataContext.TwitchChatFontSize, RelativeSource={RelativeSource AncestorType=ListBox}}" Margin="0,0,10,0" />
+                                        <TextBlock Grid.Column="1" Text="{Binding UserName}" FontWeight="SemiBold" Margin="0,0,8,0" FontSize="{Binding DataContext.TwitchChatFontSize, RelativeSource={RelativeSource AncestorType=ListBox}}">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
                                                     <Setter Property="Foreground" Value="{StaticResource StudioAccentBrush}" />
@@ -271,7 +286,7 @@
                                                 </Style>
                                             </TextBlock.Style>
                                         </TextBlock>
-                                        <TextBlock Grid.Column="2" Text="{Binding Message}" TextWrapping="Wrap">
+                                        <TextBlock Grid.Column="2" Text="{Binding Message}" TextWrapping="Wrap" FontSize="{Binding DataContext.TwitchChatFontSize, RelativeSource={RelativeSource AncestorType=ListBox}}">
                                             <TextBlock.Style>
                                                 <Style TargetType="TextBlock">
                                                     <Setter Property="Foreground" Value="#FFF5F5F5" />
@@ -296,8 +311,8 @@
             <Grid Grid.Column="1">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
-                    <RowDefinition Height="1.8*" />
-                    <RowDefinition Height="1.5*" />
+                    <RowDefinition Height="2*" />
+                    <RowDefinition Height="1*" />
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -382,27 +397,6 @@
                             <Button Content="Stop" Command="{Binding StopCommand}" Width="80" Margin="0,0,6,0" />
                             <Button Content="Next" Command="{Binding NextCommand}" Width="80" />
                         </StackPanel>
-
-                        <StackPanel Grid.Row="3" Margin="0,10,0,0">
-                            <TextBlock Text="Deck Level" Foreground="{StaticResource StudioMutedTextBrush}" />
-                            <Grid Margin="0,4,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <Slider Grid.Column="0"
-                                        Minimum="0"
-                                        Maximum="100"
-                                        Value="{Binding VolumePercent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                        TickFrequency="5"
-                                        IsSnapToTickEnabled="False" />
-                                <TextBlock Grid.Column="1"
-                                           Text="{Binding VolumePercentDisplay}"
-                                           Margin="12,0,0,0"
-                                           VerticalAlignment="Center"
-                                           FontWeight="SemiBold" />
-                            </Grid>
-                        </StackPanel>
                     </Grid>
                 </Border>
 
@@ -483,27 +477,6 @@
                             <Button Content="Stop" Command="{Binding StopCommand}" Width="80" Margin="0,0,6,0" />
                             <Button Content="Next" Command="{Binding NextCommand}" Width="80" />
                         </StackPanel>
-
-                        <StackPanel Grid.Row="3" Margin="0,10,0,0">
-                            <TextBlock Text="Deck Level" Foreground="{StaticResource StudioMutedTextBrush}" />
-                            <Grid Margin="0,4,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="Auto" />
-                                </Grid.ColumnDefinitions>
-                                <Slider Grid.Column="0"
-                                        Minimum="0"
-                                        Maximum="100"
-                                        Value="{Binding VolumePercent, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                        TickFrequency="5"
-                                        IsSnapToTickEnabled="False" />
-                                <TextBlock Grid.Column="1"
-                                           Text="{Binding VolumePercentDisplay}"
-                                           Margin="12,0,0,0"
-                                           VerticalAlignment="Center"
-                                           FontWeight="SemiBold" />
-                            </Grid>
-                        </StackPanel>
                     </Grid>
                 </Border>
 
@@ -522,7 +495,6 @@
                                 Background="#FF11141C"
                                 Margin="0,6,0,0"
                                 Padding="8">
-                            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                             <StackPanel>
                                     <Grid Margin="0,0,0,4">
                                         <Grid.RowDefinitions>
@@ -551,18 +523,6 @@
                                         </StackPanel>
                                     </ToggleButton>
                                 </Grid>
-                                <TextBlock Text="{Binding TwitchStatusMessage}"
-                                           TextWrapping="Wrap"
-                                           FontSize="11"
-                                           Margin="0,0,0,2" />
-                                <TextBlock Text="{Binding TwitchRequestSummary}"
-                                           FontSize="10"
-                                           Foreground="{StaticResource StudioMutedTextBrush}"
-                                           Margin="0,0,0,4" />
-                                <TextBlock Text="Configure Twitch in Settings."
-                                           FontSize="10"
-                                           Foreground="{StaticResource StudioMutedTextBrush}"
-                                           TextWrapping="Wrap" />
                                 <Separator Margin="0,8,0,8" Background="#FF2F343F" Height="1" />
 
                                 <TextBlock Text="Live Assist Rotation" Style="{StaticResource SectionTitleText}" FontSize="12" />
@@ -633,9 +593,24 @@
                                         <Slider Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding MicVolume}" VerticalAlignment="Center" Margin="4,0" Height="16" />
                                         <TextBlock Grid.Column="2" Text="{Binding MicVolume, StringFormat={}{0}%}" VerticalAlignment="Center" Foreground="{StaticResource StudioMutedTextBrush}" FontSize="10" />
                                     </Grid>
-                                    <TextBlock Text="Mic VU" Foreground="{StaticResource StudioMutedTextBrush}" Margin="0,4,0,0" FontSize="10" />
-                                    <ProgressBar Value="{Binding MicVu, Mode=OneWay}" Maximum="1" Height="8" Margin="0,2,0,0" />
                                 </StackPanel>
+                                    <CheckBox Content="Auto fade mic"
+                                              IsChecked="{Binding MicDuckingEnabled}"
+                                              Margin="0,6,0,0"
+                                              Foreground="{StaticResource StudioMutedTextBrush}"
+                                              FontSize="10" />
+                                    <Separator Margin="0,8,0,8" Background="#FF2F343F" Height="1" />
+                                    <TextBlock Text="Output Level" Style="{StaticResource SectionTitleText}" FontSize="12" />
+                                    <Grid Margin="0,4,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="50" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="32" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Level" VerticalAlignment="Center" Foreground="{StaticResource StudioMutedTextBrush}" FontSize="10" />
+                                        <Slider Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding MasterVolume, Mode=TwoWay}" VerticalAlignment="Center" Margin="4,0" Height="16" />
+                                        <TextBlock Grid.Column="2" Text="{Binding MasterVolume, StringFormat={}{0}%}" VerticalAlignment="Center" Foreground="{StaticResource StudioMutedTextBrush}" FontSize="10" />
+                                    </Grid>
                                     <Separator Margin="0,8,0,8" Background="#FF2F343F" Height="1" />
                                     <TextBlock Text="Encoders" Style="{StaticResource SectionTitleText}" FontSize="12" />
                                     <ToggleButton IsChecked="{Binding EncodersEnabled}"
@@ -705,24 +680,17 @@
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
-                                    <StackPanel Margin="0,8,0,0">
-                                        <TextBlock Text="Program VU" Foreground="{StaticResource StudioMutedTextBrush}" FontSize="10" />
-                                        <ProgressBar Value="{Binding ProgramVu, Mode=OneWay}" Maximum="1" Height="8" Margin="0,2,0,4" />
-                                        <TextBlock Text="Encoder VU" Foreground="{StaticResource StudioMutedTextBrush}" FontSize="10" />
-                                        <ProgressBar Value="{Binding EncoderVu, Mode=OneWay}" Maximum="1" Height="8" Margin="0,2,0,0" />
-                                    </StackPanel>
-                                    
                                     <!-- Digital Clock -->
-                                    <Separator Margin="0,18,0,8" Background="#FF2F343F" Height="1" />
-                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,8">
+                                    <Separator Margin="0,8,0,8" Background="#FF2F343F" Height="1" />
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,6,0,4">
                                         <TextBlock Text="{Binding CurrentTime}"
                                                    FontFamily="Consolas"
-                                                   FontSize="28"
+                                                   FontSize="24"
                                                    FontWeight="Bold"
                                                    Foreground="{StaticResource StudioAccentBrush}"
                                                    VerticalAlignment="Center"
                                                    Margin="0,0,8,0" />
-                                        <ToggleButton Width="36"
+                                        <ToggleButton Width="32"
                                                       Height="18"
                                                       VerticalAlignment="Center"
                                                       IsChecked="{Binding Use24HourClock, Mode=TwoWay}"
@@ -733,9 +701,16 @@
                                             </StackPanel>
                                         </ToggleButton>
                                     </StackPanel>
+                                    <StackPanel Margin="0,6,0,0">
+                                        <TextBlock Text="Program VU" Foreground="{StaticResource StudioMutedTextBrush}" FontSize="10" />
+                                        <ProgressBar Value="{Binding ProgramVu, Mode=OneWay}" Maximum="1" Height="8" Margin="0,2,0,2" />
+                                        <TextBlock Text="Encoder VU" Foreground="{StaticResource StudioMutedTextBrush}" FontSize="10" />
+                                        <ProgressBar Value="{Binding EncoderVu, Mode=OneWay}" Maximum="1" Height="8" Margin="0,2,0,2" />
+                                        <TextBlock Text="Mic VU" Foreground="{StaticResource StudioMutedTextBrush}" FontSize="10" />
+                                        <ProgressBar Value="{Binding MicVu, Mode=OneWay}" Maximum="1" Height="8" Margin="0,2,0,0" />
                                     </StackPanel>
-                            </ScrollViewer>
-                            </Border>
+                                    </StackPanel>
+                                    </Border>
                         </Grid>
                 </Border>
 
@@ -910,7 +885,7 @@
                 </Border>
 
                 <!-- Cart Wall -->
-                <Border x:Name="CartWallPanel" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Style="{StaticResource PanelBorderStyle}">
+                <Border x:Name="CartWallPanel" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" Style="{StaticResource PanelBorderStyle}" Margin="0,0,0,4">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
@@ -940,11 +915,11 @@
                         </StackPanel>
 
                         <ItemsControl Grid.Row="1"
-                                      Margin="0,12,0,0"
+                                      Margin="0,8,0,0"
                                       ItemsSource="{Binding CartPads}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
-                                    <WrapPanel ItemWidth="150" ItemHeight="88" />
+                                    <WrapPanel ItemWidth="140" ItemHeight="80" />
                                 </ItemsPanelTemplate>
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
@@ -966,13 +941,23 @@
                                             <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
                                                 <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                                                 <Setter Property="VerticalContentAlignment" Value="Center" />
+                                                <Setter Property="BorderThickness" Value="1" />
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding IsPlayable}" Value="False">
                                                         <Setter Property="BorderBrush" Value="#FFFF6B6B" />
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding IsPlaying}" Value="True">
-                                                        <Setter Property="BorderBrush" Value="{StaticResource StudioAccentBrush}" />
+                                                        <Setter Property="BorderBrush" Value="#FF00FF00" />
+                                                        <Setter Property="BorderThickness" Value="4" />
                                                         <Setter Property="Opacity" Value="1" />
+                                                        <Setter Property="Effect">
+                                                            <Setter.Value>
+                                                                <DropShadowEffect Color="#FF00FF00"
+                                                                                  BlurRadius="18"
+                                                                                  ShadowDepth="0"
+                                                                                  Opacity="0.95" />
+                                                            </Setter.Value>
+                                                        </Setter>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
